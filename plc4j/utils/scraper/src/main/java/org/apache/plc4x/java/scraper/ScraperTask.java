@@ -32,6 +32,7 @@ import org.apache.plc4x.java.api.types.PlcResponseCode;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.Collections;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
@@ -46,7 +47,7 @@ import java.util.stream.Collectors;
  * One {@link ScrapeJob} gets split into multiple tasks.
  * One task for each source that is defined in the {@link org.apache.plc4x.java.scraper.config.JobConfiguration}.
  */
-public class ScraperTask implements Runnable {
+public class ScraperTask implements Runnable, ScraperTaskMBean {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(ScraperTask.class);
 
@@ -191,6 +192,29 @@ public class ScraperTask implements Runnable {
 
     public void handleErrorResponse(Map<String, PlcResponseCode> failed) {
         LOGGER.warn("Handling error responses: {}", failed);
+    }
+
+
+    //---------------------------------
+    // JMX Monitoring
+    //---------------------------------
+    @Override
+    public long getScrapesTotal() {
+        return requestCounter.get();
+    }
+
+    @Override
+    public long getScrapesSuccess() {
+        return successCounter.get();
+    }
+
+    @Override
+    public String[] getPercentiles() {
+        String[] percentiles = new String[10];
+        for (int i = 1; i <= 10; i += 1) {
+            percentiles[i - 1] = String.format("%d%%: %s ms", 10 * i, latencyStatistics.getPercentile(10.0 * i) * 1e-6);
+        }
+        return percentiles;
     }
 
 }
